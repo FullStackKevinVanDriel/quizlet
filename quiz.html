@@ -449,6 +449,57 @@
         .question-header .category-badge {
             margin-bottom: 0;
         }
+
+        /* Mastered Questions List */
+        .mastered-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .mastered-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 12px 15px;
+            background: #0f3460;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+
+        .mastered-item-text {
+            flex: 1;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .mastered-item-category {
+            color: #4fc3f7;
+            font-size: 0.75rem;
+            margin-bottom: 5px;
+        }
+
+        .unmaster-btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .unmaster-btn:hover {
+            background: #ff6b6b;
+        }
+
+        .empty-list-message {
+            text-align: center;
+            color: #888;
+            padding: 30px;
+        }
     </style>
 </head>
 <body>
@@ -497,6 +548,7 @@
             <button class="btn btn-primary" onclick="startPractice()">Practice Quiz</button>
             <button class="btn" onclick="startFinalExam()">Final Exam (100% Required)</button>
             <button class="btn" onclick="showProgress()">View Progress</button>
+            <button class="btn" onclick="showMasteredList()">Manage Mastered Questions</button>
             <button class="btn btn-danger btn-small" onclick="resetProgress()">Reset All Progress</button>
             <button class="btn btn-small" onclick="changeKeyword()" style="margin-top: 10px; opacity: 0.7;">Change Keyword</button>
         </div>
@@ -567,6 +619,16 @@
             <div class="quiz-card">
                 <h2 style="margin-bottom: 20px;">Your Progress</h2>
                 <div id="progress-details"></div>
+            </div>
+        </div>
+
+        <!-- Mastered Questions Screen -->
+        <div id="mastered-screen" class="hidden">
+            <a href="#" class="back-link" onclick="backToMenu(); return false;">&larr; Back to Menu</a>
+            <div class="quiz-card">
+                <h2 style="margin-bottom: 20px;">Mastered Questions</h2>
+                <p style="color: #888; margin-bottom: 15px;">Click "Remove" to add a question back to your practice queue.</p>
+                <div id="mastered-list" class="mastered-list"></div>
             </div>
         </div>
     </div>
@@ -966,7 +1028,7 @@
 
         // Show/hide screens
         function showScreen(screenId) {
-            ['keyword-screen', 'menu-screen', 'quiz-screen', 'exam-screen', 'result-screen', 'progress-screen'].forEach(id => {
+            ['keyword-screen', 'menu-screen', 'quiz-screen', 'exam-screen', 'result-screen', 'progress-screen', 'mastered-screen'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
             });
             document.getElementById(screenId).classList.remove('hidden');
@@ -1262,6 +1324,53 @@
             });
 
             document.getElementById('progress-details').innerHTML = html;
+        }
+
+        // Show mastered questions list
+        function showMasteredList() {
+            showScreen('mastered-screen');
+
+            const masteredQuestions = questions.filter(q => state.mastered.includes(q.id));
+            const container = document.getElementById('mastered-list');
+
+            if (masteredQuestions.length === 0) {
+                container.innerHTML = '<div class="empty-list-message">No mastered questions yet.</div>';
+                return;
+            }
+
+            let html = '';
+            masteredQuestions.forEach(q => {
+                html += `
+                    <div class="mastered-item" id="mastered-item-${q.id}">
+                        <div class="mastered-item-text">
+                            <div class="mastered-item-category">${q.category}</div>
+                            ${q.q}
+                        </div>
+                        <button class="unmaster-btn" onclick="unmasterQuestion(${q.id})">Remove</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Remove a question from mastered list
+        function unmasterQuestion(id) {
+            const index = state.mastered.indexOf(id);
+            if (index > -1) {
+                state.mastered.splice(index, 1);
+                saveState();
+                updateStats();
+                // Remove the item from the DOM
+                const item = document.getElementById('mastered-item-' + id);
+                if (item) {
+                    item.remove();
+                }
+                // Check if list is now empty
+                if (state.mastered.length === 0) {
+                    document.getElementById('mastered-list').innerHTML = '<div class="empty-list-message">No mastered questions yet.</div>';
+                }
+            }
         }
 
         // Reset progress
