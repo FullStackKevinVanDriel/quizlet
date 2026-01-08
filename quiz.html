@@ -382,6 +382,9 @@
                 <!-- Multiple Choice Phase -->
                 <div id="choice-phase" class="hidden">
                     <div class="choices" id="choices-container"></div>
+                    <div id="practice-next-btn" class="btn-group hidden" style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="proceedToNextQuestion()">Next Question</button>
+                    </div>
                 </div>
 
                 <!-- Always Know Checkbox -->
@@ -403,6 +406,9 @@
                 <span class="category-badge" id="exam-category"></span>
                 <p class="question-text" id="exam-question"></p>
                 <div class="choices" id="exam-choices"></div>
+                <div id="exam-next-btn" class="btn-group hidden" style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="proceedToNextExamQuestion()">Next Question</button>
+                </div>
             </div>
         </div>
 
@@ -802,6 +808,7 @@
             document.getElementById('know-it-phase').classList.remove('hidden');
             document.getElementById('answer-phase').classList.add('hidden');
             document.getElementById('choice-phase').classList.add('hidden');
+            document.getElementById('practice-next-btn').classList.add('hidden');
             document.getElementById('always-know').checked = false;
         }
 
@@ -849,8 +856,15 @@
                 }
             });
 
-            const correct = index === q.correct;
-            setTimeout(() => recordAnswer(correct), 1000);
+            // Store whether the answer was correct and show Next button
+            state.lastAnswerCorrect = index === q.correct;
+            document.getElementById('practice-next-btn').classList.remove('hidden');
+        }
+
+        // Proceed to next question after reviewing answer
+        function proceedToNextQuestion() {
+            document.getElementById('practice-next-btn').classList.add('hidden');
+            recordAnswer(state.lastAnswerCorrect);
         }
 
         // Record answer
@@ -920,6 +934,9 @@
             document.getElementById('exam-category').textContent = q.category;
             document.getElementById('exam-question').textContent = q.q;
 
+            // Hide the Next Question button for fresh question
+            document.getElementById('exam-next-btn').classList.add('hidden');
+
             const container = document.getElementById('exam-choices');
             container.innerHTML = '';
 
@@ -951,7 +968,14 @@
             }
 
             state.examIndex++;
-            setTimeout(loadExamQuestion, 800);
+            // Show Next Question button instead of auto-advancing
+            document.getElementById('exam-next-btn').classList.remove('hidden');
+        }
+
+        // Proceed to next exam question after reviewing answer
+        function proceedToNextExamQuestion() {
+            document.getElementById('exam-next-btn').classList.add('hidden');
+            loadExamQuestion();
         }
 
         // Show exam results
