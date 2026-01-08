@@ -481,36 +481,17 @@
                 </div>
                 <p class="question-text" id="question-text"></p>
 
-                <!-- Know It Phase -->
-                <div id="know-it-phase">
-                    <p style="color: #888; margin-bottom: 15px;">Do you know the answer?</p>
-                    <div class="btn-group">
-                        <button class="btn btn-success" onclick="showAnswer(true)">Yes, I Know It</button>
-                        <button class="btn" onclick="showAnswer(false)">No, Show Me</button>
-                    </div>
-                </div>
-
-                <!-- Answer Reveal Phase -->
-                <div id="answer-phase" class="hidden">
-                    <div class="answer-text" id="answer-text"></div>
-                    <div class="btn-group">
-                        <button class="btn btn-success" onclick="recordAnswer(true)">I Got It Right</button>
-                        <button class="btn btn-danger" onclick="recordAnswer(false)">I Got It Wrong</button>
-                    </div>
-                </div>
-
-                <!-- Multiple Choice Phase -->
-                <div id="choice-phase" class="hidden">
+                <!-- Multiple Choice -->
+                <div id="choice-phase">
                     <div class="choices" id="choices-container"></div>
                     <div id="practice-next-btn" class="btn-group hidden" style="margin-top: 20px;">
                         <button class="btn btn-primary" onclick="proceedToNextQuestion()">Next Question</button>
                     </div>
                 </div>
 
-                <!-- Always Know Checkbox -->
-                <div class="checkbox-container" id="always-know-container">
-                    <input type="checkbox" id="always-know" onchange="markAlwaysKnow()">
-                    <label for="always-know">I always know this - don't quiz me again</label>
+                <!-- I Already Know This Button -->
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-small" onclick="markAlwaysKnow()" style="opacity: 0.7;">I already know this</button>
                 </div>
             </div>
         </div>
@@ -831,7 +812,7 @@
         // State management
         let state = {
             mastered: [],
-            streaks: {},
+            answerCounts: {},
             totalCorrect: 0,
             totalAnswered: 0,
             currentQuestion: null,
@@ -851,7 +832,7 @@
                 if (res.ok) {
                     const data = await res.json();
                     state.mastered = data.mastered || [];
-                    state.streaks = data.streaks || {};
+                    state.answerCounts = data.answerCounts || {};
                     state.totalCorrect = data.totalCorrect || 0;
                     state.totalAnswered = data.totalAnswered || 0;
                 }
@@ -872,7 +853,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             mastered: state.mastered,
-                            streaks: state.streaks,
+                            answerCounts: state.answerCounts,
                             totalCorrect: state.totalCorrect,
                             totalAnswered: state.totalAnswered
                         })
@@ -947,37 +928,19 @@
             document.getElementById('question-text').textContent = q.q;
             document.getElementById('answer-text').textContent = q.a;
 
-            // Show streak if applicable
-            const streak = state.streaks[q.id] || 0;
-            const streakEl = document.getElementById('streak-indicator');
-            if (streak > 0) {
-                streakEl.textContent = `${streak}/10 streak`;
-                streakEl.classList.remove('hidden');
+            // Show answer count
+            const count = state.answerCounts[q.id] || 0;
+            const countEl = document.getElementById('streak-indicator');
+            if (count > 0) {
+                countEl.textContent = `Seen ${count}x`;
+                countEl.classList.remove('hidden');
             } else {
-                streakEl.classList.add('hidden');
+                countEl.classList.add('hidden');
             }
 
-            // Reset phases
-            document.getElementById('know-it-phase').classList.remove('hidden');
-            document.getElementById('answer-phase').classList.add('hidden');
-            document.getElementById('choice-phase').classList.add('hidden');
+            // Show choices immediately
             document.getElementById('practice-next-btn').classList.add('hidden');
-            document.getElementById('always-know').checked = false;
-        }
-
-        // Show answer
-        function showAnswer(claimedKnowledge) {
-            state.claimedKnowledge = claimedKnowledge;
-            document.getElementById('know-it-phase').classList.add('hidden');
-
-            if (claimedKnowledge) {
-                // Show answer for self-verification
-                document.getElementById('answer-phase').classList.remove('hidden');
-            } else {
-                // Show multiple choice
-                document.getElementById('choice-phase').classList.remove('hidden');
-                renderChoices();
-            }
+            renderChoices();
         }
 
         // Shuffle array helper
@@ -1044,17 +1007,9 @@
             const q = state.currentQuestion;
 
             state.totalAnswered++;
+            state.answerCounts[q.id] = (state.answerCounts[q.id] || 0) + 1;
             if (correct) {
                 state.totalCorrect++;
-                state.streaks[q.id] = (state.streaks[q.id] || 0) + 1;
-
-                // Check for mastery (10 correct in a row)
-                if (state.streaks[q.id] >= 10 && !state.mastered.includes(q.id)) {
-                    state.mastered.push(q.id);
-                    alert('Mastered! This question won\'t appear again.');
-                }
-            } else {
-                state.streaks[q.id] = 0;
             }
 
             saveState();
@@ -1064,8 +1019,7 @@
 
         // Mark as always know
         function markAlwaysKnow() {
-            const checked = document.getElementById('always-know').checked;
-            if (checked && state.currentQuestion) {
+            if (state.currentQuestion) {
                 const q = state.currentQuestion;
                 if (!state.mastered.includes(q.id)) {
                     state.mastered.push(q.id);
@@ -1073,8 +1027,8 @@
                     state.totalCorrect++;
                     saveState();
                     updateStats();
-                    loadNextQuestion();
                 }
+                loadNextQuestion();
             }
         }
 
@@ -1226,7 +1180,7 @@
         function resetProgress() {
             if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
                 state.mastered = [];
-                state.streaks = {};
+                state.answerCounts = {};
                 state.totalCorrect = 0;
                 state.totalAnswered = 0;
                 saveState();
